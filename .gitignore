@@ -1,0 +1,9 @@
+.dev.vars
+.wrangler/
+node_modules/
+scripts/.cache/
+ACCESS.txt
+
+# Generated / patient data — kept out of the public repo
+public/data/
+profile_source/

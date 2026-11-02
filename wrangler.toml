@@ -1,0 +1,17 @@
+name = "answer-review"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_DOMAIN = "aamrut.com"
+
+# Created with `wrangler d1 create answer-review` (account: Anshul.bagaria@aamrut.com's Account).
+[[d1_databases]]
+binding = "DB"
+database_name = "answer-review"
+database_id = "fcd9a5a8-b96e-4436-9968-e78d430469af"
+
+# Secrets (not in this file): TEAM_PASSWORD, SESSION_SECRET
+#   wrangler pages secret put TEAM_PASSWORD
+#   wrangler pages secret put SESSION_SECRET
+# For local dev, put them in .dev.vars.

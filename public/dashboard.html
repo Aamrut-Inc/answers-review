@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<title>Team dashboard — Answer QA</title>
+</head>
+<body>
+<div class="app-shell">
+  <header class="top-bar" id="topbar"></header>
+  <main class="page">
+    <div class="dash-title">
+      <div><h1>Team dashboard</h1><p>How the judges and the review team see each batch of answers.</p></div>
+      <select id="dash-batch" class="field" aria-label="Batch"></select>
+    </div>
+    <div class="dash-chips" id="dash-chips"></div>
+    <section class="dash-section">
+      <h2>Average judge level by batch</h2>
+      <p class="section-note">Levels, not percentages: 3.0/4 means answers are "mostly fine" on average. Only answers whose judge run finished count.</p>
+      <div id="dash-levels"></div>
+    </section>
+    <div class="dash-grid">
+      <section class="dash-section"><h2>Level distribution</h2><div id="dash-dist"></div></section>
+      <section class="dash-section"><h2>Reviewers vs the judge</h2><div id="dash-agree"></div></section>
+      <section class="dash-section"><h2>Judge run health</h2><div id="dash-health"></div></section>
+      <section class="dash-section"><h2>Flags by category</h2><div id="dash-cats"></div></section>
+      <section class="dash-section"><h2>Flags by patient</h2><div id="dash-profiles"></div></section>
+      <section class="dash-section"><h2>Recent activity</h2><div id="dash-activity"></div></section>
+    </div>
+  </main>
+</div>
+<script src="assets/js/core.js"></script>
+<script src="assets/js/dashboard.js"></script>
+</body>
+</html>
