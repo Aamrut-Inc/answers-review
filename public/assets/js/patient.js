@@ -1,4 +1,4 @@
-/* A patient's space (patient.html?p=<n>#profile | #questions | #activity | #answer=<id>).
+/* A patient's space (patient.html?p=<n>#profile | #questions | #assistant | #activity | #answer=<id>).
 
    Everything about one patient lives in this one page, so moving between the
    profile, the question list and an answer is a same-document view
@@ -51,6 +51,7 @@
     const nav = [
       ["profile", "user", "Profile", flagCounts(profileState).open ? `<span class="count rust">${flagCounts(profileState).open}</span>` : ""],
       ["questions", "chat", "Questions & answers", `<span class="count">${groups.length}</span>`],
+      ["assistant", "tool", "Ask the assistant", ""],
       ["activity", "activity", "Review activity", ""],
     ];
     sideEl.innerHTML = `<div class="card side-card">
@@ -193,11 +194,63 @@
     return v;
   }
 
+  /* ---------- Ask the assistant ---------- */
+  /* Chart QA's assistant, over this patient's full clinical record. The model
+     asks for lookups and the browser runs them against record.json, so the
+     chart never leaves the page wholesale; functions/api/assistant.js only
+     relays one model call at a time.
+
+     It reads Chart QA's own index/content/wearable/record shapes rather than
+     the condensed profile this page renders, so those are loaded here from
+     data/chart/<folder>/ (populated by scripts/sync_chart_data.py). They are
+     a few hundred KB per patient, so the load is deferred until the tab is
+     actually opened, and cached after. */
+  const chartCache = {};
+  function loadChartData() {
+    const folder = profile.folder;
+    if (!folder) return Promise.reject(new Error("This patient has no chart folder recorded — re-run scripts/build_profiles.py."));
+    if (!chartCache[folder]) {
+      const base = `data/chart/${encodeURI(folder)}`;
+      chartCache[folder] = Promise.all([
+        loadJSON(`${base}/index.json`), loadJSON(`${base}/wearable.json`), loadJSON(`${base}/content.json`),
+      ]).catch(e => { delete chartCache[folder]; throw e; });
+    }
+    return chartCache[folder];
+  }
+
+  async function assistantView() {
+    mainEl.innerHTML = `<div class="card"><div class="loading">Loading ${escapeHtml(profile.name)}'s chart…</div></div>`;
+    let index, wearable, content;
+    try {
+      [index, wearable, content] = await loadChartData();
+    } catch (e) {
+      mainEl.innerHTML = `<div class="card"><div class="empty">
+        <p>The assistant needs this patient's chart data, which isn't published.</p>
+        <p class="muted">${escapeHtml(e.message)}</p>
+        <p class="muted">Run <code>python scripts/sync_chart_data.py</code>, then redeploy.</p>
+      </div></div>`;
+      return { flagCtx: null };
+    }
+    mainEl.innerHTML = `<div class="card" id="assistant-card"></div>`;
+    // renderAssistant wants Chart QA's patient shape: an id and a name.
+    renderAssistant(document.getElementById("assistant-card"),
+                    { id: profileId, name: profile.name }, index, wearable, content, profileState);
+    // Assistant answers are flaggable, under the profile's own flag list —
+    // a claim the assistant makes about this patient belongs with the patient.
+    return {
+      flagCtx: {
+        id: profileId,
+        state: profileState,
+        onChanged: () => { renderProfileStrip(); decorateAnchors(); renderSide(current); },
+      },
+    };
+  }
+
   /* ---------- Routing with view transitions ---------- */
   function parseRoute() {
     const h = decodeURIComponent(location.hash.slice(1));
     if (h.startsWith("answer=") && index.answers.some(a => a.id === h.slice(7) && a.profile.n === card.n)) return { type: "answer", id: h.slice(7) };
-    return { type: ["profile", "questions", "activity"].includes(h) ? h : "profile" };
+    return { type: ["profile", "questions", "assistant", "activity"].includes(h) ? h : "profile" };
   }
   async function renderRoute(route) {
     if (view && view.destroy) view.destroy();
@@ -207,6 +260,7 @@
     renderSide(route);
     view = route.type === "profile" ? profileView()
       : route.type === "questions" ? questionsView()
+      : route.type === "assistant" ? await assistantView()
       : route.type === "activity" ? activityView()
       : await answerView(route.id);
     initFlagging(view.flagCtx);
@@ -234,7 +288,7 @@
       const h3 = key && mainEl.querySelector(`h3[data-qkey="${CSS.escape(key.trim().toLowerCase())}"]`);
       if (h3) h3.style.viewTransitionName = "question-title";
     }
-    const order = ["profile", "questions", "answer", "activity"];
+    const order = ["profile", "questions", "answer", "assistant", "activity"];
     document.documentElement.dataset.nav = order.indexOf(route.type) >= order.indexOf(from.type) ? "forward" : "back";
     const t = document.startViewTransition(render);
     try { await t.finished; } catch (e) { /* skipped */ }

@@ -234,6 +234,8 @@ def build(patient):
     enc = index.get("encounters") or {}
     return {
         "n": n,
+        # The assistant loads this patient's chart data from data/chart/<folder>/.
+        "folder": folder,
         "name": patient["name"],
         "age_sex": patient["age_sex"],
         "tag": patient["condition_tag"],
@@ -262,7 +264,7 @@ def main():
         with open(os.path.join(OUT, "patients", f"{prof['n']}.json"), "w", encoding="utf-8") as f:
             json.dump(prof, f, ensure_ascii=False)
         cards.append({
-            "n": prof["n"], "name": prof["name"], "age_sex": prof["age_sex"], "tag": prof["tag"],
+            "n": prof["n"], "folder": prof["folder"], "name": prof["name"], "age_sex": prof["age_sex"], "tag": prof["tag"],
             "summary": prof["narrative"][0] if prof["narrative"] else "",
             "conditions": [c["label"] for c in prof["conditions"]["primary"]][:3],
             "condition_count": len(prof["conditions"]["primary"]) + len(prof["conditions"]["other"]),

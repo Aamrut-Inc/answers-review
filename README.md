@@ -6,6 +6,12 @@ The site is organised by patient. **Patients** (home) shows all 9 simulated pati
 
 - **Profile** (`#profile`): summary, conditions, medications, clinical numbers with trends, wearable data, recent visits and the grounding brief. Every item can be flagged (hover → ⚑, right-click, or select text), with the same flag lists, comments, bin and versions as answers. Profile flags are saved under `patient-<n>`.
 - **Questions & answers** (`#questions`): every question, with one row per batch and persona — judge levels, flags and edits at a glance.
+- **Ask the assistant** (`#assistant`): Chart QA's assistant, over this patient's full clinical
+  record — every lab reading, visit, note, medication order and wearable day, plus the generator's
+  profile, limitations and methodology documents. The model asks for lookups and the *browser* runs
+  them against `record.json`, so the chart is never shipped to the model wholesale;
+  `functions/api/assistant.js` relays one model call at a time and keeps the API key server-side.
+  Its answers are flaggable, under the patient's own flag list.
 - **Review activity** (`#activity`).
 - **An answer** (`#answer=<id>`): opening one folds the sidebar into a rail and glides the question into the header; `answer.html?answer=<id>` forwards old links here.
 
@@ -30,6 +36,27 @@ python scripts/build_profiles.py
 ```
 
 Builds `public/data/patients.json` and `public/data/patients/<n>.json` from `profile_source/chart_qa/` (a snapshot of Chart QA's per-patient data) plus the grounding briefs in `../11-All_Profiles_Persona_Conversations_Extended/`.
+
+## Chart data (profile + assistant)
+
+```
+python scripts/sync_chart_data.py --from ../patient-review/data
+python scripts/build_profiles.py
+```
+
+`sync_chart_data.py` pulls Chart QA's per-patient output into two places:
+`profile_source/chart_qa/` (what `build_profiles.py` condenses into each patient page) and
+`public/data/chart/<folder>/` (the full `index`/`content`/`wearable`/`record` the assistant reads
+in the browser). This replaces what used to be a hand-copied snapshot, so refreshing is a command
+rather than something to remember.
+
+`record.json` is the large one — 1.4 MB for CKD, ~100 KB for the rest — and only the assistant
+needs it. Everything under `public/data/` is gitignored and served behind sign-in.
+
+**The assistant needs a key.** Either set `OPENAI_API_KEY` on this Pages project, or point
+`ASSISTANT_WORKER_URL` (in `wrangler.toml`) at the Worker that already holds one and set the
+`ASSISTANT_WORKER_SECRET` Pages secret to match its `APP_SHARED_SECRET`. Without either, the
+assistant tab loads and every message returns a clear "isn't configured" error.
 
 ## Refresh the data from Braintrust
 
@@ -82,4 +109,7 @@ Sign-in: any `@aamrut.com` email (`ALLOWED_DOMAIN` in `wrangler.toml`) plus the 
 | `public/assets/js/answerview.js` | The answer view (conversation, answer editing, scores, tools, prompts) |
 | `public/assets/js/reviewkit.js` | Shared review strip, flag lists, comments, bin, versions |
 | `public/assets/js/flagging.js` | Select / right-click to flag, badges, jump to location |
+| `public/assets/js/assistant.js` | Ask the assistant: tools, context, chat panel |
+| `public/assets/js/chartlib.js` | Chart QA's formatting/stats helpers, used by the assistant |
+| `scripts/sync_chart_data.py` | Chart QA's data → `profile_source/` + `public/data/chart/` |
 | `public/assets/js/dashboard.js` | Team dashboard |
