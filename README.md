@@ -58,6 +58,40 @@ needs it. Everything under `public/data/` is gitignored and served behind sign-i
 `ASSISTANT_WORKER_SECRET` Pages secret to match its `APP_SHARED_SECRET`. Without either, the
 assistant tab loads and every message returns a clear "isn't configured" error.
 
+## Bringing Chart QA's flags across
+
+Chart QA kept its patient flags in its own database (`patient_state`, plus a `review_events`
+audit trail). Here a patient profile is just another reviewed thing, under the id `patient-<n>`,
+so its flags belong in `review_state` alongside the answer flags.
+
+```
+python scripts/migrate_chart_flags.py --chart chart_state.json --events chart_events.json \
+    --existing answer_state.json --dry-run      # see what would happen
+```
+
+The script's docstring has the exact `wrangler d1 execute` exports to feed it. It reads Chart
+QA's database only, and writes SQL for you to read before applying — nothing is deleted, and
+re-running the generated file would duplicate flags, so apply it once.
+
+It has to reconcile four things. Flag ids: Chart QA mints `f<timestamp>`, this portal mints
+`f1, f2…` from a per-row `seq`, so incoming flags are renumbered above the existing `seq` and
+every reference to them — comments, bin entries, `version_history.flag_ids` — moves with them.
+That matters because this portal may already hold flags on the same profile, raised from the
+Profile view, and those must not be lost. `fixed_in_version`, which roll-back needs and Chart QA
+doesn't store, is recovered from the version history. Chart QA's history assumes a v1 it never
+records, so an explicit v1 is synthesised. And its dates are dates, not timestamps; they are
+carried across as-is rather than padded with a fabricated time.
+
+**The audit trail came too.** `review_events` is now part of `schema.sql` and every applied
+operation appends to it, so the history Chart QA's team could query still answers the same
+question — who raised a flag, and when — including for flags since deleted and purged. An edit's
+replacement text is not copied into it; the version history already holds that.
+
+```
+wrangler d1 execute answer-review --remote --command \
+  "SELECT answer_id, op, email, at FROM review_events ORDER BY id DESC LIMIT 50"
+```
+
 ## Refresh the data from Braintrust
 
 ```
@@ -112,4 +146,5 @@ Sign-in: any `@aamrut.com` email (`ALLOWED_DOMAIN` in `wrangler.toml`) plus the 
 | `public/assets/js/assistant.js` | Ask the assistant: tools, context, chat panel |
 | `public/assets/js/chartlib.js` | Chart QA's formatting/stats helpers, used by the assistant |
 | `scripts/sync_chart_data.py` | Chart QA's data → `profile_source/` + `public/data/chart/` |
+| `scripts/migrate_chart_flags.py` | Chart QA's `patient_state` → `review_state` + `review_events` |
 | `public/assets/js/dashboard.js` | Team dashboard |
