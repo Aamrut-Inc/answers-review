@@ -5,6 +5,14 @@ compatibility_date = "2026-09-01"
 [vars]
 ALLOWED_DOMAIN = "aamrut.com"
 
+# "Ask the assistant" (ported from Chart QA). functions/api/assistant.js calls
+# OpenAI directly when OPENAI_API_KEY is set on this project; otherwise it
+# forwards to the standalone Worker that already holds the key, which Chart QA
+# deployed. That Worker is shared, so don't delete it while either portal uses it.
+#   Secrets: ASSISTANT_WORKER_SECRET (= that Worker's APP_SHARED_SECRET)
+#            or OPENAI_API_KEY to skip the Worker entirely.
+ASSISTANT_WORKER_URL = "https://patient-review-assistant.aamrutpatientreview.workers.dev"
+
 # Created with `wrangler d1 create answer-review` (account: Anshul.bagaria@aamrut.com's Account).
 [[d1_databases]]
 binding = "DB"
