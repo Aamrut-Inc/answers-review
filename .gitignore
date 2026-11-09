@@ -4,6 +4,13 @@ node_modules/
 scripts/.cache/
 ACCESS.txt
 
-# Generated / patient data — kept out of the public repo
+# Generated / patient data — kept out of the public repo.
+# This repo is PUBLIC, so the patterns are deliberately wider than the exact
+# build paths: a backup like `public/data.bak/` is not matched by `public/data/`
+# and would otherwise be committed.
 public/data/
+public/data*
 profile_source/
+profile_source*
+__pycache__/
+*.pyc

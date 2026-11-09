@@ -92,6 +92,32 @@ wrangler d1 execute answer-review --remote --command \
   "SELECT answer_id, op, email, at FROM review_events ORDER BY id DESC LIMIT 50"
 ```
 
+## Recovering data Braintrust no longer has
+
+Braintrust logs expire, so `build_data.py` can only rebuild answers whose traces are still
+inside the retention window — past that it reports `0 answers` and the cause isn't obvious.
+A deployed instance is already serving the JSON built when those logs existed:
+
+```
+python scripts/fetch_deployed_data.py --from https://answer-review.pages.dev \
+    --email you@aamrut.com --skip-patients
+```
+
+It signs in with the team password and copies `index.json`, `prompts.json` and every
+`answers/<id>.json` down. This is the only way to recover judge scores for old answers, since
+those were written into the build rather than re-read from Braintrust each time.
+
+Pass `--skip-patients` when the local profile build is newer than the deployment's —
+`build_profiles.py` now emits a `folder` field that older builds lack and the assistant needs.
+
+**It does not bring reviewer flags or edits.** Those live in the deployment's D1, and come
+across only by deploying to the same Pages project, or by exporting that database.
+
+A local export from `export_braintrust_logs.py` also works as a source: drop its `Global.jsonl`
+rows into `scripts/.cache/global_logs.json` as a JSON array and run `build_data.py --cached`.
+That recovers the answers themselves, but not judge scores — the rubric judge runs as its own
+`judge_eval` root rather than inside the `qa` trace, so the build never sees it.
+
 ## Refresh the data from Braintrust
 
 ```
@@ -147,4 +173,5 @@ Sign-in: any `@aamrut.com` email (`ALLOWED_DOMAIN` in `wrangler.toml`) plus the 
 | `public/assets/js/chartlib.js` | Chart QA's formatting/stats helpers, used by the assistant |
 | `scripts/sync_chart_data.py` | Chart QA's data → `profile_source/` + `public/data/chart/` |
 | `scripts/migrate_chart_flags.py` | Chart QA's `patient_state` → `review_state` + `review_events` |
+| `scripts/fetch_deployed_data.py` | Mirror a deployment's built data when Braintrust has expired |
 | `public/assets/js/dashboard.js` | Team dashboard |
